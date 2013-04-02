@@ -21,6 +21,7 @@
 
         // ASP.NET json date format regex
         aspNetJsonRegex = /^\/?Date\((\-?\d+)/i,
+        aspNetTimeSpanJsonRegex = /(\-)?(\d*)?\.?(\d+)\:(\d+)\:(\d+)\.?(\d{3})?/,
 
         // format tokens
         formattingTokens = /(\[[^\[]*\])|(\\)?(Mo|MM?M?M?|Do|DDDo|DD?D?D?|ddd?d?|do?|w[o|w]?|W[o|W]?|YYYYY|YYYY|YY|a|A|hh?|HH?|mm?|ss?|SS?S?|X|zz?|ZZ?|.)/g,
@@ -57,7 +58,7 @@
         parseTimezoneChunker = /([\+\-]|\d\d)/gi,
 
         // getter and setter names
-        proxyGettersAndSetters = 'Month|Date|Hours|Minutes|Seconds|Milliseconds'.split('|'),
+        proxyGettersAndSetters = 'Date|Hours|Minutes|Seconds|Milliseconds'.split('|'),
         unitMillisecondFactors = {
             'Milliseconds' : 1,
             'Seconds' : 1e3,
@@ -358,7 +359,7 @@
         },
 
         monthsParse : function (monthName) {
-            var i, mom, regex, output;
+            var i, mom, regex;
 
             if (!this._monthsParse) {
                 this._monthsParse = [];
@@ -391,6 +392,27 @@
         _weekdaysMin : "Su_Mo_Tu_We_Th_Fr_Sa".split("_"),
         weekdaysMin : function (m) {
             return this._weekdaysMin[m.day()];
+        },
+
+        weekdaysParse : function (weekdayName) {
+            var i, mom, regex;
+
+            if (!this._weekdaysParse) {
+                this._weekdaysParse = [];
+            }
+
+            for (i = 0; i < 7; i++) {
+                // make the regex if we don't have it already
+                if (!this._weekdaysParse[i]) {
+                    mom = moment([2000, 1]).day(i);
+                    regex = '^' + this.weekdays(mom, '') + '|^' + this.weekdaysShort(mom, '') + '|^' + this.weekdaysMin(mom, '');
+                    this._weekdaysParse[i] = new RegExp(regex.replace('.', ''), 'i');
+                }
+                // test the regex
+                if (this._weekdaysParse[i].test(weekdayName)) {
+                    return i;
+                }
+            }
         },
 
         _longDateFormat : {
@@ -970,6 +992,8 @@
         var isDuration = moment.isDuration(input),
             isNumber = (typeof input === 'number'),
             duration = (isDuration ? input._data : (isNumber ? {} : input)),
+            matched = aspNetTimeSpanJsonRegex.exec(input),
+            sign,
             ret;
 
         if (isNumber) {
@@ -978,6 +1002,16 @@
             } else {
                 duration.milliseconds = input;
             }
+        } else if (matched) {
+            sign = (matched[1] === "-") ? -1 : 1;
+            duration = {
+                y: 0,
+                d: ~~matched[2] * sign,
+                h: ~~matched[3] * sign,
+                m: ~~matched[4] * sign,
+                s: ~~matched[5] * sign,
+                ms: ~~matched[6] * sign
+            };
         }
 
         ret = new Duration(duration);
@@ -1185,38 +1219,70 @@
 
         day : function (input) {
             var day = this._isUTC ? this._d.getUTCDay() : this._d.getDay();
-            return input == null ? day :
-                this.add({ d : input - day });
+            if (input != null) {
+                if (typeof input === 'string') {
+                    input = this.lang().weekdaysParse(input);
+                    if (typeof input !== 'number') {
+                        return this;
+                    }
+                }
+                return this.add({ d : input - day });
+            } else {
+                return day;
+            }
+        },
+
+        month : function (input) {
+            var utc = this._isUTC ? 'UTC' : '';
+            if (input != null) {
+                if (typeof input === 'string') {
+                    input = this.lang().monthsParse(input);
+                    if (typeof input !== 'number') {
+                        return this;
+                    }
+                }
+                this._d['set' + utc + 'Month'](input);
+                return this;
+            } else {
+                return this._d['get' + utc + 'Month']();
+            }
         },
 
         startOf: function (units) {
-            units = units.replace(/s$/, '');
+            units = units.replace(/(.)s$/, "$1");
             // the following switch intentionally omits break keywords
             // to utilize falling through the cases.
             switch (units) {
             case 'year':
+            case 'y':
                 this.month(0);
                 /* falls through */
             case 'month':
+            case 'M':
                 this.date(1);
                 /* falls through */
             case 'week':
+            case 'w':
             case 'day':
+            case 'd':
                 this.hours(0);
                 /* falls through */
             case 'hour':
+            case 'h':
                 this.minutes(0);
                 /* falls through */
             case 'minute':
+            case 'm':
                 this.seconds(0);
                 /* falls through */
             case 'second':
+            case 's': 
                 this.milliseconds(0);
                 /* falls through */
             }
 
             // weeks are a special case
-            if (units === 'week') {
+            if (units === 'week' || units === 'w') {
                 this.day(0);
             }
 
@@ -1224,7 +1290,7 @@
         },
 
         endOf: function (units) {
-            return this.startOf(units).add(units.replace(/s?$/, 's'), 1).subtract('ms', 1);
+            return this.startOf(units).add(units, 1).subtract('ms', 1);
         },
 
         isAfter: function (input, units) {
@@ -1301,6 +1367,7 @@
 
     // add plural methods
     moment.fn.days = moment.fn.day;
+    moment.fn.months = moment.fn.month;
     moment.fn.weeks = moment.fn.week;
     moment.fn.isoWeeks = moment.fn.isoWeek;
 
@@ -1317,7 +1384,8 @@
         valueOf : function () {
             return this._milliseconds +
               this._days * 864e5 +
-              this._months * 2592e6;
+              (this._months % 12) * 2592e6 +
+              ~~(this._months / 12) * 31536e6;
         },
 
         humanize : function (withSuffix) {
@@ -1354,6 +1422,9 @@
     }
 
     makeDurationAsGetter('Weeks', 6048e5);
+    moment.duration.fn.asMonths = function () {
+        return (+this - this.years() * 31536e6) / 2592e6 + this.years() * 12;
+    };
 
 
     /************************************

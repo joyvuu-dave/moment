@@ -83,6 +83,83 @@ exports.duration = {
         test.deepEqual(moment.duration(complicated), complicated, "complicated clones are equal");
         test.done();
     },
+    
+    "instatiation from serialized C# TimeSpan zero" : function(test) {
+        test.expect(6);
+        test.equal(moment.duration("00:00:00").years(), 0, "0 years");
+        test.equal(moment.duration("00:00:00").days(), 0, "0 days");
+        test.equal(moment.duration("00:00:00").hours(), 0, "0 hours");
+        test.equal(moment.duration("00:00:00").minutes(), 0, "0 minutes");
+        test.equal(moment.duration("00:00:00").seconds(), 0, "0 seconds");
+        test.equal(moment.duration("00:00:00").milliseconds(), 0, "0 milliseconds");
+        test.done();
+    },
+    
+    "instatiation from serialized C# TimeSpan with days" : function(test) {
+        test.expect(6);
+        test.equal(moment.duration("1.02:03:04.9999999").years(), 0, "0 years");
+        test.equal(moment.duration("1.02:03:04.9999999").days(), 1, "1 day");
+        test.equal(moment.duration("1.02:03:04.9999999").hours(), 2, "2 hours");
+        test.equal(moment.duration("1.02:03:04.9999999").minutes(), 3, "3 minutes");
+        test.equal(moment.duration("1.02:03:04.9999999").seconds(), 4, "4 seconds");
+        test.equal(moment.duration("1.02:03:04.9999999").milliseconds(), 999, "999 milliseconds");
+        test.done();
+    },
+    
+    "instatiation from serialized C# TimeSpan without days" : function(test) {
+        test.expect(6);
+        test.equal(moment.duration("01:02:03.9999999").years(), 0, "0 years");
+        test.equal(moment.duration("01:02:03.9999999").days(), 0, "0 days");
+        test.equal(moment.duration("01:02:03.9999999").hours(), 1, "1 hour");
+        test.equal(moment.duration("01:02:03.9999999").minutes(), 2, "2 minutes");
+        test.equal(moment.duration("01:02:03.9999999").seconds(), 3, "3 seconds");
+        test.equal(moment.duration("01:02:03.9999999").milliseconds(), 999, "999 milliseconds");
+        test.done();
+    },
+
+    "instatiation from serialized C# TimeSpan without days or milliseconds" : function(test) {
+        test.expect(6);
+        test.equal(moment.duration("01:02:03").years(), 0, "0 years");
+        test.equal(moment.duration("01:02:03").days(), 0, "0 days");
+        test.equal(moment.duration("01:02:03").hours(), 1, "1 hour");
+        test.equal(moment.duration("01:02:03").minutes(), 2, "2 minutes");
+        test.equal(moment.duration("01:02:03").seconds(), 3, "3 seconds");
+        test.equal(moment.duration("01:02:03").milliseconds(), 0, "0 milliseconds");
+        test.done();
+    },
+
+    "instatiation from serialized C# TimeSpan without milliseconds" : function(test) {
+        test.expect(6);
+        test.equal(moment.duration("1.02:03:04").years(), 0, "0 years");
+        test.equal(moment.duration("1.02:03:04").days(), 1, "1 day");
+        test.equal(moment.duration("1.02:03:04").hours(), 2, "2 hours");
+        test.equal(moment.duration("1.02:03:04").minutes(), 3, "3 minutes");
+        test.equal(moment.duration("1.02:03:04").seconds(), 4, "4 seconds");
+        test.equal(moment.duration("1.02:03:04").milliseconds(), 0, "0 milliseconds");
+        test.done();
+    },
+
+    "instatiation from serialized C# TimeSpan maxValue" : function(test) {
+        test.expect(6);
+        test.equal(moment.duration("10675199.02:48:05.4775807").years(), 29653, "29653 years");
+        test.equal(moment.duration("10675199.02:48:05.4775807").days(), 29, "29 day");
+        test.equal(moment.duration("10675199.02:48:05.4775807").hours(), 2, "2 hours");
+        test.equal(moment.duration("10675199.02:48:05.4775807").minutes(), 48, "48 minutes");
+        test.equal(moment.duration("10675199.02:48:05.4775807").seconds(), 5, "5 seconds");
+        test.equal(moment.duration("10675199.02:48:05.4775807").milliseconds(), 477, "477 milliseconds");
+        test.done();
+    },
+
+    "instatiation from serialized C# TimeSpan minValue" : function(test) {
+        test.expect(6);
+        test.equal(moment.duration("-10675199.02:48:05.4775808").years(), -29653, "29653 years");
+        test.equal(moment.duration("-10675199.02:48:05.4775808").days(), -29, "29 day");
+        test.equal(moment.duration("-10675199.02:48:05.4775808").hours(), -2, "2 hours");
+        test.equal(moment.duration("-10675199.02:48:05.4775808").minutes(), -48, "48 minutes");
+        test.equal(moment.duration("-10675199.02:48:05.4775808").seconds(), -5, "5 seconds");
+        test.equal(moment.duration("-10675199.02:48:05.4775808").milliseconds(), -477, "477 milliseconds");
+        test.done();
+    },
 
     "humanize" : function(test) {
         test.expect(32);
@@ -191,14 +268,14 @@ exports.duration = {
         });
 
         test.expect(8);
-        test.equal(Math.round(d.asYears() * 100) / 100,   2.26,        "years");
-        test.equal(Math.round(d.asMonths() * 100) / 100,  27.51,       "months");
-        test.equal(Math.round(d.asWeeks() * 100) / 100,   117.91,      "weeks");
-        test.equal(Math.round(d.asDays() * 100) / 100,    825.34,      "days");
-        test.equal(Math.round(d.asHours() * 100) / 100,   19808.16,    "hours");
-        test.equal(Math.round(d.asMinutes() * 100) / 100, 1188489.33,  "minutes");
-        test.equal(Math.round(d.asSeconds() * 100) / 100, 71309360.01, "seconds");
-        test.equal(d.asMilliseconds(),                    71309360012, "milliseconds");
+        test.equal(d.asYears().toFixed(2),          "2.29", "years");
+        test.equal(d.asMonths().toFixed(2),        "27.51", "months");
+        test.equal(d.asWeeks().toFixed(2),        "119.33", "weeks");
+        test.equal(d.asDays().toFixed(2),         "835.34", "days");
+        test.equal(d.asHours().toFixed(2),      "20048.16", "hours");
+        test.equal(d.asMinutes().toFixed(2),  "1202889.33", "minutes");
+        test.equal(d.asSeconds().toFixed(2), "72173360.01", "seconds");
+        test.equal(d.asMilliseconds(),         72173360012, "milliseconds");
         test.done();
     },
 
